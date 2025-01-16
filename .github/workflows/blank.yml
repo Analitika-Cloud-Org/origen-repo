@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - main
-      - desa
-      - cert
+      - develop
+      - staging
       - feature/*
       - hotfix/*
   workflow_dispatch:
@@ -26,37 +26,34 @@ jobs:
         run: |
           # Configurar Git
           git config --global user.email "bot@analitika.cloud"
-          git config --global user.name "ACloud DevOps"
+          git config --global user.name "Analitika Cloud"
           
           # Obtener nombre de la rama actual
           CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
           echo "📦 Sincronizando rama: $CURRENT_BRANCH"
           
-          # Crear rama temporal y copiar contenido sin workflows
+          # Crear copia temporal del contenido sin workflows
           echo "🔄 Preparando contenido..."
-          TEMP_DIR=$(mktemp -d)
-          git archive HEAD | tar x -C "$TEMP_DIR"
-          rm -rf "$TEMP_DIR/.github/workflows"
+          git branch -D temp-sync 2>/dev/null || true
+          git checkout -b temp-sync
           
-          # Crear nueva rama temporal limpia
-          git checkout --orphan temp-sync-$CURRENT_BRANCH
+          # Eliminar directorio workflows del staging area
+          git rm -r --cached .github/workflows/ 2>/dev/null || true
+          git update-index --skip-worktree .github/workflows/
           
-          # Copiar contenido sin workflows
-          cp -r "$TEMP_DIR"/* .
-          rm -rf "$TEMP_DIR"
+          # Reescribir todos los commits con el autor de Analitika Cloud
+          git -c user.name="Analitika Cloud" -c user.email="bot@analitika.cloud" rebase --root -x '
+            GIT_COMMITTER_NAME="Analitika Cloud" GIT_COMMITTER_EMAIL="bot@analitika.cloud" 
+            git commit --amend --no-edit --author="Analitika Cloud <bot@analitika.cloud>" --no-verify
+          '
           
-          # Añadir todo el contenido limpio
-          git add .
-          git commit --no-verify --quiet -m "Sync branch $CURRENT_BRANCH"
-          
-          # Push a Bitbucket
+          # Push a Bitbucket directamente (sin rama temporal visible)
           echo "⬆️ Realizando push a Bitbucket..."
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
-          git push bitbucket temp-sync-$CURRENT_BRANCH:$CURRENT_BRANCH --force
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitika-cloud/destino-repo.git
+          git push bitbucket HEAD:$CURRENT_BRANCH --force
           
-          # Limpiar
-          echo "🧹 Limpiando..."
+          # Volver a la rama original
           git checkout $CURRENT_BRANCH
-          git branch -D temp-sync-$CURRENT_BRANCH
+          git branch -D temp-sync
           
           echo "✅ Sincronización completada exitosamente"
