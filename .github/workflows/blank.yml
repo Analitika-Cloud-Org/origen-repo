@@ -23,7 +23,7 @@ jobs:
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
           # Añadir el remote de Bitbucket
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org:analitikacloud/destino-repo.git
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
 
           # Push a Bitbucket
           git push bitbucket --all --force
