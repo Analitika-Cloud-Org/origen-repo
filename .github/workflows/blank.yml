@@ -30,9 +30,9 @@ jobs:
           # Preparar el nuevo commit con la identidad modificada
           git checkout -b temp_branch
           GIT_COMMITTER_NAME="Acloud DevOps" \
-          GIT_COMMITTER_EMAIL="devops@analitika.cloud" \
+          GIT_COMMITTER_EMAIL="Acloud.DevOps@analitika.cloud" \
           GIT_AUTHOR_NAME="Acloud DevOps" \
-          GIT_AUTHOR_EMAIL="devops@analitika.cloud" \
+          GIT_AUTHOR_EMAIL="Acloud.DevOps@analitika.cloud" \
           git commit-tree "$COMMIT_HASH"^{tree} -p "$COMMIT_HASH"^ -m "$(git log -1 --pretty=%B)" > .git/NEW_COMMIT
           
           # Actualizar la referencia de la rama
