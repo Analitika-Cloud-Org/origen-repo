@@ -1,5 +1,4 @@
-name: Sync to Bitbucket
-
+name: Mirror to Bitbucket
 on:
   push:
     branches:
@@ -8,41 +7,33 @@ on:
       - cert
       - feature/*
       - hotfix/*
-  workflow_dispatch:
+  workflow_dispatch:  # Permite ejecutar el workflow manualmente
 
 jobs:
-  sync:
+  mirror-to-bitbucket:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          
-      - name: Sync current branch to Bitbucket
+          fetch-depth: 0  # Necesario para clonar todo el historial
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Push to Bitbucket
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          # Configurar Git
-          git config --global user.name "Analitika Cloud" && git config --global user.email "bot@analitika.cloud"
+          # Elimina el remote origin existente
+          git remote remove origin || true
           
-          # Obtener nombre de la rama actual
-          CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
-          echo "Sincronizando rama: $CURRENT_BRANCH"
+          # Añade el remote de Bitbucket
+          # Reemplaza 'workspace' y 'repo-name' con tus valores
+          git remote add origin https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           
-          # Eliminar workflows sin crear rama temporal
-          rm -rf .github/workflows/
-          
-          # Configurar autor para todos los commits
-          export GIT_COMMITTER_NAME="Analitika Cloud"
-          export GIT_COMMITTER_EMAIL="bot@analitika.cloud"
-          export GIT_AUTHOR_NAME="Analitika Cloud"
-          export GIT_AUTHOR_EMAIL="bot@analitika.cloud"
-          
-          # Reescribir historia
-          git filter-branch --env-filter 'export GIT_AUTHOR_NAME="Analitika Cloud" export GIT_AUTHOR_EMAIL="bot@analitika.cloud" export GIT_COMMITTER_NAME="Analitika Cloud" export GIT_COMMITTER_EMAIL="bot@analitika.cloud"' -- --all
-          
-          # Push directo a Bitbucket
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
-          git push bitbucket HEAD:$CURRENT_BRANCH --force
+          # Empuja todas las ramas y tags
+          git push origin --mirror --force
