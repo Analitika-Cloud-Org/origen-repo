@@ -13,8 +13,10 @@ jobs:
   mirror-to-bitbucket:
     runs-on: ubuntu-latest
     env:
-      GIT_COMMITTER_NAME: ${{ secrets.GIT_COMMITTER_NAME || 'Acloud DevOps' }}
-      GIT_COMMITTER_EMAIL: ${{ secrets.GIT_COMMITTER_EMAIL || 'devops@analitika.cloud' }}
+      GIT_COMMITTER_NAME: "Acloud DevOps"
+      GIT_COMMITTER_EMAIL: "devops@analitika.cloud"
+      GIT_AUTHOR_NAME: "Acloud DevOps"
+      GIT_AUTHOR_EMAIL: "devops@analitika.cloud"
     
     steps:
       - name: Checkout repository
@@ -22,21 +24,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure Git and Prepare Repository
+      - name: Configure Git
         run: |
-          echo "Configurando identidad de Git..."
-          git config --global user.name "${{ env.GIT_COMMITTER_NAME }}"
-          git config --global user.email "${{ env.GIT_COMMITTER_EMAIL }}"
+          # Configuración global de git
+          git config --global user.name "$GIT_AUTHOR_NAME"
+          git config --global user.email "$GIT_AUTHOR_EMAIL"
           
-          # Reescribir el historial de commits con la nueva identidad
-          git filter-branch --env-filter '
-            export GIT_AUTHOR_NAME="${{ env.GIT_COMMITTER_NAME }}"
-            export GIT_AUTHOR_EMAIL="${{ env.GIT_COMMITTER_EMAIL }}"
-            export GIT_COMMITTER_NAME="${{ env.GIT_COMMITTER_NAME }}"
-            export GIT_COMMITTER_EMAIL="${{ env.GIT_COMMITTER_EMAIL }}"
-          ' --tag-name-filter cat -- --all
+          # Configuración específica del repositorio
+          git config user.name "$GIT_AUTHOR_NAME"
+          git config user.email "$GIT_AUTHOR_EMAIL"
           
-          echo "✅ Git configurado y commits reescritos con usuario: ${{ env.GIT_COMMITTER_NAME }}"
+          # Verificar la configuración
+          echo "✅ Configuración de Git actual:"
+          git config --list | grep user
 
       - name: Push to Bitbucket
         env:
@@ -44,18 +44,28 @@ jobs:
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
           BITBUCKET_REPO: analitikacloud/destino-repo
         run: |
+          # Configurar el remote con credenciales
           echo "Configurando remote de Bitbucket..."
           git remote remove bitbucket || true
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git
+          git remote add bitbucket "https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git"
           
-          echo "Sincronizando con nueva identidad..."
-          # Forzar el push con la nueva identidad
+          # Push con variables de entorno específicas para el autor
+          echo "Sincronizando con identidad configurada..."
+          GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME" \
+          GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL" \
+          GIT_AUTHOR_NAME="$GIT_AUTHOR_NAME" \
+          GIT_AUTHOR_EMAIL="$GIT_AUTHOR_EMAIL" \
           git push bitbucket --all --force
+          
+          echo "Sincronizando tags..."
+          GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME" \
+          GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL" \
+          GIT_AUTHOR_NAME="$GIT_AUTHOR_NAME" \
+          GIT_AUTHOR_EMAIL="$GIT_AUTHOR_EMAIL" \
           git push bitbucket --tags --force
           
-          echo "Verificando estado del push..."
           if [ $? -eq 0 ]; then
-            echo "✅ Sincronización completada exitosamente con la nueva identidad"
+            echo "✅ Sincronización completada exitosamente"
           else
             echo "❌ Error en la sincronización"
             exit 1
