@@ -18,6 +18,10 @@ jobs:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
+          # Configurar Git primero
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions Bot"
+          
           # Crear una rama temporal
           git checkout -b temp-sync
           
