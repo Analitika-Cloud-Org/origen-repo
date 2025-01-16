@@ -24,7 +24,7 @@ jobs:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          # Configurar Git primero (IMPORTANTE)
+          # Configurar Git
           git config --global user.email "bot@analitika.cloud"
           git config --global user.name "ACloud DevOps"
           
@@ -32,17 +32,24 @@ jobs:
           CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
           echo "📦 Sincronizando rama: $CURRENT_BRANCH"
           
-          # Crear rama temporal
-          echo "🔄 Creando rama temporal..."
-          git checkout -b temp-sync-$CURRENT_BRANCH
+          # Crear rama temporal y copiar contenido sin workflows
+          echo "🔄 Preparando contenido..."
+          TEMP_DIR=$(mktemp -d)
+          git archive HEAD | tar x -C "$TEMP_DIR"
+          rm -rf "$TEMP_DIR/.github/workflows"
           
-          # Eliminar workflows
-          echo "🗑️ Eliminando directorio workflows..."
-          rm -rf .github/workflows/
-          git add -A
-          git commit --no-verify -m "temp commit"
+          # Crear nueva rama temporal limpia
+          git checkout --orphan temp-sync-$CURRENT_BRANCH
           
-          # Push a Bitbucket (ya con la identidad configurada)
+          # Copiar contenido sin workflows
+          cp -r "$TEMP_DIR"/* .
+          rm -rf "$TEMP_DIR"
+          
+          # Añadir todo el contenido limpio
+          git add .
+          git commit --no-verify --quiet -m "Sync branch $CURRENT_BRANCH"
+          
+          # Push a Bitbucket
           echo "⬆️ Realizando push a Bitbucket..."
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           git push bitbucket temp-sync-$CURRENT_BRANCH:$CURRENT_BRANCH --force
