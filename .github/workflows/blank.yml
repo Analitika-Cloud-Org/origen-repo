@@ -33,7 +33,7 @@ jobs:
           
           # Añade el remote de Bitbucket
           # Reemplaza 'workspace' y 'repo-name' con tus valores
-          git remote add origin https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           
           # Empuja todas las ramas y tags
           git push origin --mirror --force
