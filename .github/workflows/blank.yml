@@ -7,7 +7,7 @@ on:
       - cert
       - feature/*
       - hotfix/*
-  workflow_dispatch:  # Permite ejecutar el workflow manualmente
+  workflow_dispatch:
 
 jobs:
   mirror-to-bitbucket:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Necesario para clonar todo el historial
+          fetch-depth: 0
 
       - name: Configure Git
         run: |
@@ -27,13 +27,24 @@ jobs:
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
+          BITBUCKET_REPO: analitikacloud/destino-repo
         run: |
-          # Elimina el remote origin existente
-          git remote remove origin || true
+          echo "Configurando remote de Bitbucket..."
+          git remote remove bitbucket || true
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git
           
-          # Añade el remote de Bitbucket
-          # Reemplaza 'workspace' y 'repo-name' con tus valores
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
+          echo "Sincronizando ramas..."
+          # Primero, pushear todas las ramas locales
+          git push bitbucket --all --force
           
-          # Empuja todas las ramas y tags
-          git push origin --mirror --force
+          echo "Sincronizando tags..."
+          # Luego, pushear todos los tags
+          git push bitbucket --tags --force
+          
+          echo "Verificando estado del push..."
+          if [ $? -eq 0 ]; then
+            echo "✅ Sincronización completada exitosamente"
+          else
+            echo "❌ Error en la sincronización"
+            exit 1
+          fi
