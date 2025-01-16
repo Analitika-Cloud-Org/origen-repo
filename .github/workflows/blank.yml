@@ -24,6 +24,10 @@ jobs:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
+          # Configurar Git primero (IMPORTANTE)
+          git config --global user.email "bot@analitika.cloud"
+          git config --global user.name "ACloud DevOps"
+          
           # Obtener nombre de la rama actual
           CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
           echo "📦 Sincronizando rama: $CURRENT_BRANCH"
@@ -38,15 +42,7 @@ jobs:
           git add -A
           git commit --no-verify -m "temp commit"
           
-          # Reescribir el historial con el autor deseado
-          git filter-branch -f --env-filter '
-          export GIT_COMMITTER_NAME="ACloud DevOps"
-          export GIT_COMMITTER_EMAIL="bot@analitika.cloud"
-          export GIT_AUTHOR_NAME="ACloud DevOps"
-          export GIT_AUTHOR_EMAIL="bot@analitika.cloud"
-          ' HEAD
-          
-          # Push a Bitbucket
+          # Push a Bitbucket (ya con la identidad configurada)
           echo "⬆️ Realizando push a Bitbucket..."
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           git push bitbucket temp-sync-$CURRENT_BRANCH:$CURRENT_BRANCH --force
