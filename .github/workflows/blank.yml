@@ -44,7 +44,7 @@ jobs:
           
           # Configurar y push a Bitbucket
           echo "⬆️ Realizando push a Bitbucket..."
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitika-cloud/destino-repo.git
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           git push bitbucket temp-sync-$CURRENT_BRANCH:$CURRENT_BRANCH --force
           
           # Limpiar
