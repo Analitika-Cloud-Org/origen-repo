@@ -32,26 +32,24 @@ jobs:
           CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
           echo "📦 Sincronizando rama: $CURRENT_BRANCH"
           
-          # Preparar rama temporal
-          echo "🔄 Preparando contenido..."
-          git checkout -b temp-sync
+          # Guardar el estado actual
+          git stash -u
           
-          # Ignorar workflows
+          # Eliminar workflows de manera segura
           rm -rf .github/workflows/
-          git update-index --skip-worktree .github/workflows/
           
-          # Reescribir autor
-          git -c user.name='Analitika Cloud' -c user.email='bot@analitika.cloud' \
-            -c committer.name='Analitika Cloud' -c committer.email='bot@analitika.cloud' \
-            commit --amend --no-edit --reset-author --no-verify
+          # Configurar el autor para todos los commits
+          export GIT_COMMITTER_NAME="Analitika Cloud"
+          export GIT_COMMITTER_EMAIL="bot@analitika.cloud"
+          export GIT_AUTHOR_NAME="Analitika Cloud"
+          export GIT_AUTHOR_EMAIL="bot@analitika.cloud"
           
-          # Push a Bitbucket
+          # Push directo a Bitbucket
           echo "⬆️ Realizando push a Bitbucket..."
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           git push bitbucket HEAD:$CURRENT_BRANCH --force
           
-          # Limpiar
-          git checkout $CURRENT_BRANCH
-          git branch -D temp-sync
+          # Restaurar estado original
+          git stash pop
           
           echo "✅ Sincronización completada exitosamente"
