@@ -12,42 +12,61 @@ on:
 jobs:
   mirror-to-bitbucket:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Configure Git
+      - name: Setup repository and identity
         run: |
-          # Solo configuramos el committer, mantenemos el autor original
-          git config --global committer.name "Acloud DevOps"
-          git config --global committer.email "devops@analitika.cloud"
+          # Crear script temporal para modificar el último commit
+          cat > modify_commit.sh << 'EOF'
+          #!/bin/bash
+          
+          # Obtener el último commit
+          COMMIT_HASH=$(git rev-parse HEAD)
+          
+          # Preparar el nuevo commit con la identidad modificada
+          git checkout -b temp_branch
+          GIT_COMMITTER_NAME="Acloud DevOps" \
+          GIT_COMMITTER_EMAIL="devops@analitika.cloud" \
+          GIT_AUTHOR_NAME="Acloud DevOps" \
+          GIT_AUTHOR_EMAIL="devops@analitika.cloud" \
+          git commit-tree "$COMMIT_HASH"^{tree} -p "$COMMIT_HASH"^ -m "$(git log -1 --pretty=%B)" > .git/NEW_COMMIT
+          
+          # Actualizar la referencia de la rama
+          git update-ref refs/heads/temp_branch $(cat .git/NEW_COMMIT)
+          EOF
+          
+          chmod +x modify_commit.sh
+          
+          # Ejecutar el script
+          ./modify_commit.sh
 
       - name: Push to Bitbucket
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
           BITBUCKET_REPO: analitikacloud/destino-repo
-          GIT_COMMITTER_NAME: "Acloud DevOps"
-          GIT_COMMITTER_EMAIL: "devops@analitika.cloud"
         run: |
           echo "Configurando remote de Bitbucket..."
-          git remote remove bitbucket || true
-          git remote add bitbucket "https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git"
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git
           
-          echo "Sincronizando ramas manteniendo autores originales..."
-          # Push preservando autores originales
-          git push bitbucket --all --force
+          echo "Sincronizando con identidad modificada..."
+          git push bitbucket temp_branch:desa --force
+          
+          # Sincronizar otras ramas
+          git push bitbucket main:main --force || true
+          git push bitbucket cert:cert --force || true
+          git push bitbucket 'refs/heads/feature/*:refs/heads/feature/*' --force || true
+          git push bitbucket 'refs/heads/hotfix/*:refs/heads/hotfix/*' --force || true
           
           echo "Sincronizando tags..."
           git push bitbucket --tags --force
           
           if [ $? -eq 0 ]; then
             echo "✅ Sincronización completada exitosamente"
-            echo "Los commits mantienen sus autores originales"
-            echo "Committer configurado como: $GIT_COMMITTER_NAME"
           else
             echo "❌ Error en la sincronización"
             exit 1
