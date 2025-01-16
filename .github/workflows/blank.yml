@@ -18,18 +18,19 @@ jobs:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          # Configurar Git primero
+          # Configurar Git
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions Bot"
           
-          # Crear una rama temporal
-          git checkout -b temp-sync
+          # Forzar la eliminación de los archivos de workflow
+          rm -rf .github/workflows/
           
-          # Eliminar directorio de workflows
-          git rm -r --cached .github/workflows
+          # Crear una rama temporal y hacer commit de los cambios
+          git checkout -b temp-sync
+          git add -A
           git commit -m "chore: remove workflows for Bitbucket sync [skip ci]"
           
-          # Push a Bitbucket (solo la rama temporal)
+          # Push a Bitbucket
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           git push bitbucket temp-sync:main --force
           
