@@ -6,8 +6,8 @@ on:
       - main
       - desa
       - cert
-      - feature/*      # Para ramas feature
-      - hotfix/*       # Para ramas hotfix
+      - feature/*
+      - hotfix/*
   workflow_dispatch:
 
 jobs:
@@ -26,26 +26,27 @@ jobs:
         run: |
           # Configuración inicial de Git
           git config --global user.email "github-actions@github.com"
-          git config --global user.name "GitHub Actions Bot"
+          git config --global user.name "ACloud DevOps"
           
           # Obtener nombre de la rama actual
           CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
           echo "📦 Sincronizando rama: $CURRENT_BRANCH"
           
-          # Eliminar directorio de workflows
+          # Crear rama temporal desde el último commit
+          echo "🔄 Creando rama temporal..."
+          git checkout -b temp-sync-$CURRENT_BRANCH
+          
+          # Eliminar workflows sin crear un nuevo commit
           echo "🗑️ Eliminando directorio workflows..."
           rm -rf .github/workflows/
           
-          # Crear y cambiar a rama temporal
-          echo "🔄 Creando rama temporal..."
-          git checkout -b temp-sync-$CURRENT_BRANCH
-          git add -A
-          git commit -m "chore: remove workflows for Bitbucket sync [skip ci]"
+          # Actualizar el índice de git sin crear un commit
+          git update-index --skip-worktree .github/workflows/
           
-          # Configurar y push a Bitbucket
+          # Push directo a Bitbucket sin commit adicional
           echo "⬆️ Realizando push a Bitbucket..."
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
-          git push bitbucket temp-sync-$CURRENT_BRANCH:$CURRENT_BRANCH --force
+          git push bitbucket HEAD:$CURRENT_BRANCH --force
           
           # Limpiar
           echo "🧹 Limpiando..."
