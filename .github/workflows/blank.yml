@@ -13,7 +13,6 @@ jobs:
   mirror-to-bitbucket:
     runs-on: ubuntu-latest
     env:
-      # Variables personalizables con valores por defecto
       GIT_COMMITTER_NAME: ${{ secrets.GIT_COMMITTER_NAME || 'Acloud DevOps' }}
       GIT_COMMITTER_EMAIL: ${{ secrets.GIT_COMMITTER_EMAIL || 'devops@analitika.cloud' }}
     
@@ -23,12 +22,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure Git
+      - name: Configure Git and Prepare Repository
         run: |
           echo "Configurando identidad de Git..."
           git config --global user.name "${{ env.GIT_COMMITTER_NAME }}"
           git config --global user.email "${{ env.GIT_COMMITTER_EMAIL }}"
-          echo "✅ Git configurado con usuario: ${{ env.GIT_COMMITTER_NAME }}"
+          
+          # Reescribir el historial de commits con la nueva identidad
+          git filter-branch --env-filter '
+            export GIT_AUTHOR_NAME="${{ env.GIT_COMMITTER_NAME }}"
+            export GIT_AUTHOR_EMAIL="${{ env.GIT_COMMITTER_EMAIL }}"
+            export GIT_COMMITTER_NAME="${{ env.GIT_COMMITTER_NAME }}"
+            export GIT_COMMITTER_EMAIL="${{ env.GIT_COMMITTER_EMAIL }}"
+          ' --tag-name-filter cat -- --all
+          
+          echo "✅ Git configurado y commits reescritos con usuario: ${{ env.GIT_COMMITTER_NAME }}"
 
       - name: Push to Bitbucket
         env:
@@ -40,17 +48,14 @@ jobs:
           git remote remove bitbucket || true
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git
           
-          echo "Sincronizando ramas..."
-          # Primero, pushear todas las ramas locales
+          echo "Sincronizando con nueva identidad..."
+          # Forzar el push con la nueva identidad
           git push bitbucket --all --force
-          
-          echo "Sincronizando tags..."
-          # Luego, pushear todos los tags
           git push bitbucket --tags --force
           
           echo "Verificando estado del push..."
           if [ $? -eq 0 ]; then
-            echo "✅ Sincronización completada exitosamente"
+            echo "✅ Sincronización completada exitosamente con la nueva identidad"
           else
             echo "❌ Error en la sincronización"
             exit 1
