@@ -24,10 +24,6 @@ jobs:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          # Configuración inicial de Git
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "ACloud DevOps"
-          
           # Obtener nombre de la rama actual
           CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
           echo "📦 Sincronizando rama: $CURRENT_BRANCH"
@@ -36,14 +32,20 @@ jobs:
           echo "🔄 Creando rama temporal..."
           git checkout -b temp-sync-$CURRENT_BRANCH
           
+          # Reescribir el historial de commits con el autor deseado
+          git filter-branch -f --env-filter '
+          export GIT_COMMITTER_NAME="ACloud DevOps"
+          export GIT_COMMITTER_EMAIL="bot@analitika.cloud"
+          export GIT_AUTHOR_NAME="ACloud DevOps"
+          export GIT_AUTHOR_EMAIL="bot@analitika.cloud"
+          ' HEAD
+          
           # Eliminar workflows sin crear un nuevo commit
           echo "🗑️ Eliminando directorio workflows..."
           rm -rf .github/workflows/
-          
-          # Actualizar el índice de git sin crear un commit
           git update-index --skip-worktree .github/workflows/
           
-          # Push directo a Bitbucket sin commit adicional
+          # Push a Bitbucket con el historial reescrito
           echo "⬆️ Realizando push a Bitbucket..."
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           git push bitbucket HEAD:$CURRENT_BRANCH --force
