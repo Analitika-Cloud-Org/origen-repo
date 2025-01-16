@@ -2,38 +2,55 @@ name: Sync to Bitbucket
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - desa
+      - cert
+      - feature/*
+      - hotfix/*
   workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
-      - name: Sync to Bitbucket (excluding workflows)
+          
+      - name: Sync current branch to Bitbucket
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          # Configurar Git
+          # Configuración inicial de Git
           git config --global user.email "github-actions@github.com"
           git config --global user.name "ACloud DevOps"
           
-          # Forzar la eliminación de los archivos de workflow
+          # Obtener nombre de la rama actual
+          CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
+          echo "📦 Sincronizando rama: $CURRENT_BRANCH"
+          
+          # Crear rama temporal desde el último commit
+          echo "🔄 Creando rama temporal..."
+          git checkout -b temp-sync-$CURRENT_BRANCH
+          
+          # Eliminar workflows sin crear un nuevo commit
+          echo "🗑️ Eliminando directorio workflows..."
           rm -rf .github/workflows/
           
-          # Crear una rama temporal y hacer commit de los cambios
-          git checkout -b temp-sync
-          git add -A
-          git commit -m "chore: remove workflows for Bitbucket sync [skip ci]"
+          # Actualizar el índice de git sin crear un commit
+          git update-index --skip-worktree .github/workflows/
           
-          # Push a Bitbucket
+          # Push directo a Bitbucket sin commit adicional
+          echo "⬆️ Realizando push a Bitbucket..."
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
-          git push bitbucket temp-sync:main --force
+          git push bitbucket HEAD:$CURRENT_BRANCH --force
           
           # Limpiar
-          git checkout main
-          git branch -D temp-sync
+          echo "🧹 Limpiando..."
+          git checkout $CURRENT_BRANCH
+          git branch -D temp-sync-$CURRENT_BRANCH
+          
+          echo "✅ Sincronización completada exitosamente"
