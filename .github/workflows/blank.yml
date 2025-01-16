@@ -32,24 +32,21 @@ jobs:
           CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
           echo "📦 Sincronizando rama: $CURRENT_BRANCH"
           
-          # Guardar el estado actual
-          git stash -u
+          # Ignorar workflows
+          echo "🔄 Preparando contenido..."
+          git filter-branch --prune-empty --tree-filter 'rm -rf .github/workflows' --tag-name-filter cat -- --all
           
-          # Eliminar workflows de manera segura
-          rm -rf .github/workflows/
-          
-          # Configurar el autor para todos los commits
-          export GIT_COMMITTER_NAME="Analitika Cloud"
-          export GIT_COMMITTER_EMAIL="bot@analitika.cloud"
+          # Reescribir autores
+          git filter-branch --env-filter '
           export GIT_AUTHOR_NAME="Analitika Cloud"
           export GIT_AUTHOR_EMAIL="bot@analitika.cloud"
+          export GIT_COMMITTER_NAME="Analitika Cloud"
+          export GIT_COMMITTER_EMAIL="bot@analitika.cloud"
+          ' -- --all
           
-          # Push directo a Bitbucket
+          # Push a Bitbucket
           echo "⬆️ Realizando push a Bitbucket..."
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
-          git push bitbucket HEAD:$CURRENT_BRANCH --force
-          
-          # Restaurar estado original
-          git stash pop
+          git push bitbucket $CURRENT_BRANCH:$CURRENT_BRANCH --force
           
           echo "✅ Sincronización completada exitosamente"
