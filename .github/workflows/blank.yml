@@ -6,40 +6,50 @@ on:
       - main
       - desa
       - cert
+      - feature/*      # Para ramas feature
+      - hotfix/*       # Para ramas hotfix
   workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           
-      - name: Sync to Bitbucket (current branch)
+      - name: Sync current branch to Bitbucket
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          # Configurar Git
+          # Configuración inicial de Git
           git config --global user.email "github-actions@github.com"
-          git config --global user.name "ACloud DevOps"
+          git config --global user.name "GitHub Actions Bot"
           
-          # Obtener el nombre de la rama actual
+          # Obtener nombre de la rama actual
           CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
+          echo "📦 Sincronizando rama: $CURRENT_BRANCH"
           
-          # Eliminar workflows
+          # Eliminar directorio de workflows
+          echo "🗑️ Eliminando directorio workflows..."
           rm -rf .github/workflows/
           
-          # Crear rama temporal
+          # Crear y cambiar a rama temporal
+          echo "🔄 Creando rama temporal..."
           git checkout -b temp-sync-$CURRENT_BRANCH
           git add -A
           git commit -m "chore: remove workflows for Bitbucket sync [skip ci]"
           
-          # Push a Bitbucket
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
+          # Configurar y push a Bitbucket
+          echo "⬆️ Realizando push a Bitbucket..."
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitika-cloud/destino-repo.git
           git push bitbucket temp-sync-$CURRENT_BRANCH:$CURRENT_BRANCH --force
           
           # Limpiar
+          echo "🧹 Limpiando..."
           git checkout $CURRENT_BRANCH
           git branch -D temp-sync-$CURRENT_BRANCH
+          
+          echo "✅ Sincronización completada exitosamente"
