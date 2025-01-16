@@ -20,7 +20,7 @@ jobs:
         run: |
           # Configurar Git
           git config --global user.email "github-actions@github.com"
-          git config --global user.name "GitHub Actions Bot"
+          git config --global user.name "ACloud DevOps"
           
           # Forzar la eliminación de los archivos de workflow
           rm -rf .github/workflows/
