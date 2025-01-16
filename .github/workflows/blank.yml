@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - main
-      - develop
-      - staging
+      - desa
+      - cert
       - feature/*
       - hotfix/*
   workflow_dispatch:
@@ -49,7 +49,7 @@ jobs:
           
           # Push a Bitbucket directamente (sin rama temporal visible)
           echo "⬆️ Realizando push a Bitbucket..."
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitika-cloud/destino-repo.git
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           git push bitbucket HEAD:$CURRENT_BRANCH --force
           
           # Volver a la rama original
