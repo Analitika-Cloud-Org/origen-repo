@@ -1,10 +1,8 @@
 name: Sync to Bitbucket
 
 on:
-  # Se ejecuta cuando hay push a main
   push:
     branches: [ "main" ]
-  # También permite ejecución manual
   workflow_dispatch:
 
 jobs:
@@ -13,18 +11,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Necesitamos todo el historial
+          fetch-depth: 0
       
-      # Configurar las credenciales de Bitbucket
-      - name: Sync to Bitbucket
+      - name: Sync to Bitbucket (excluding workflows)
         env:
-          # Necesitarás configurar estos secrets en tu repositorio de GitHub
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          # Añadir el remote de Bitbucket
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
-
-          # Push a Bitbucket
-          git push bitbucket --all --force
-          git push bitbucket --tags --force
+          # Crear una rama temporal
+          git checkout -b temp-sync
+          
+          # Eliminar directorio de workflows
+          git rm -r --cached .github/workflows
+          git commit -m "chore: remove workflows for Bitbucket sync [skip ci]"
+          
+          # Push a Bitbucket (solo la rama temporal)
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitika-cloud/destino-repo.git
+          git push bitbucket temp-sync:main --force
+          
+          # Limpiar
+          git checkout main
+          git branch -D temp-sync
