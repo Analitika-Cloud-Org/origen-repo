@@ -30,7 +30,7 @@ jobs:
           git commit -m "chore: remove workflows for Bitbucket sync [skip ci]"
           
           # Push a Bitbucket (solo la rama temporal)
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitika-cloud/destino-repo.git
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           git push bitbucket temp-sync:main --force
           
           # Limpiar
