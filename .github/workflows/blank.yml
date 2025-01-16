@@ -32,27 +32,25 @@ jobs:
           CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
           echo "📦 Sincronizando rama: $CURRENT_BRANCH"
           
-          # Crear copia temporal del contenido sin workflows
+          # Preparar rama temporal
           echo "🔄 Preparando contenido..."
-          git branch -D temp-sync 2>/dev/null || true
           git checkout -b temp-sync
           
-          # Eliminar directorio workflows del staging area
-          git rm -r --cached .github/workflows/ 2>/dev/null || true
+          # Ignorar workflows
+          rm -rf .github/workflows/
           git update-index --skip-worktree .github/workflows/
           
-          # Reescribir todos los commits con el autor de Analitika Cloud
-          git -c user.name="Analitika Cloud" -c user.email="bot@analitika.cloud" rebase --root -x '
-            GIT_COMMITTER_NAME="Analitika Cloud" GIT_COMMITTER_EMAIL="bot@analitika.cloud" 
-            git commit --amend --no-edit --author="Analitika Cloud <bot@analitika.cloud>" --no-verify
-          '
+          # Reescribir autor
+          git -c user.name='Analitika Cloud' -c user.email='bot@analitika.cloud' \
+            -c committer.name='Analitika Cloud' -c committer.email='bot@analitika.cloud' \
+            commit --amend --no-edit --reset-author --no-verify
           
-          # Push a Bitbucket directamente (sin rama temporal visible)
+          # Push a Bitbucket
           echo "⬆️ Realizando push a Bitbucket..."
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
           git push bitbucket HEAD:$CURRENT_BRANCH --force
           
-          # Volver a la rama original
+          # Limpiar
           git checkout $CURRENT_BRANCH
           git branch -D temp-sync
           
