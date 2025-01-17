@@ -22,7 +22,7 @@ jobs:
         run: |
           # Configurar identidad global
           git config --global user.name "Acloud DevOps"
-          git config --global user.email "devops@analitika.cloud"
+          git config --global user.email "Acloud.DevOps@analitika.cloud"
 
       - name: Push to Bitbucket
         env:
@@ -47,9 +47,9 @@ jobs:
               --tree-filter 'rm -rf .github/workflows' \
               --env-filter '
                 export GIT_COMMITTER_NAME="Acloud DevOps"
-                export GIT_COMMITTER_EMAIL="devops@analitika.cloud"
+                export GIT_COMMITTER_EMAIL="Acloud.DevOps@analitika.cloud"
                 export GIT_AUTHOR_NAME="Acloud DevOps"
-                export GIT_AUTHOR_EMAIL="devops@analitika.cloud"
+                export GIT_AUTHOR_EMAIL="Acloud.DevOps@analitika.cloud"
               ' HEAD
             
             # Push la rama procesada
@@ -83,9 +83,9 @@ jobs:
               --tree-filter 'rm -rf .github/workflows' \
               --env-filter '
                 export GIT_COMMITTER_NAME="Acloud DevOps"
-                export GIT_COMMITTER_EMAIL="devops@analitika.cloud"
+                export GIT_COMMITTER_EMAIL="Acloud.DevOps@analitika.cloud"
                 export GIT_AUTHOR_NAME="Acloud DevOps"
-                export GIT_AUTHOR_EMAIL="devops@analitika.cloud"
+                export GIT_AUTHOR_EMAIL="Acloud.DevOps@analitika.cloud"
               ' HEAD
             git tag -f $tag
             git push bitbucket $tag -f
