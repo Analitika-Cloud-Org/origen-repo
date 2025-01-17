@@ -1,5 +1,4 @@
-name: Sync to Bitbucket
-
+name: Mirror to Bitbucket
 on:
   push:
     branches:
@@ -11,46 +10,92 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync:
+  mirror-to-bitbucket:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
-      - name: Sync current branch to Bitbucket
+
+      - name: Setup repository
+        run: |
+          # Configurar identidad global
+          git config --global user.name "Acloud DevOps"
+          git config --global user.email "Acloud.DevOps@analitika.cloud"
+
+      - name: Push to Bitbucket
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
+          BITBUCKET_REPO: analitikacloud/destino-repo
         run: |
-          # Configuración inicial de Git
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "ACloud DevOps"
+          echo "Configurando remote de Bitbucket..."
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git
           
-          # Obtener nombre de la rama actual
-          CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
-          echo "📦 Sincronizando rama: $CURRENT_BRANCH"
+          # Función para procesar y pushear una rama
+          process_branch() {
+            local branch=$1
+            local target=$2
+            echo "Procesando rama $branch -> $target"
+            
+            # Crear rama temporal
+            git checkout -b "temp_$branch" $branch
+            
+            # Reescribir la historia excluyendo workflows y cambiando identidad
+            git filter-branch -f \
+              --tree-filter 'rm -rf .github/workflows' \
+              --env-filter '
+                export GIT_COMMITTER_NAME="Acloud DevOps"
+                export GIT_COMMITTER_EMAIL="Acloud.DevOps@analitika.cloud"
+                export GIT_AUTHOR_NAME="Acloud DevOps"
+                export GIT_AUTHOR_EMAIL="Acloud.DevOps@analitika.cloud"
+              ' HEAD
+            
+            # Push la rama procesada
+            git push -f bitbucket "temp_$branch:$target"
+            
+            # Limpiar
+            git checkout $branch
+            git branch -D "temp_$branch"
+          }
           
-          # Crear rama temporal desde el último commit
-          echo "🔄 Creando rama temporal..."
-          git checkout -b temp-sync-$CURRENT_BRANCH
+          # Procesar ramas principales
+          echo "Sincronizando ramas principales..."
+          for branch in main desa cert; do
+            if git show-ref --verify --quiet refs/heads/$branch; then
+              process_branch $branch $branch
+            fi
+          done
           
-          # Eliminar workflows sin crear un nuevo commit
-          echo "🗑️ Eliminando directorio workflows..."
-          rm -rf .github/workflows/
+          # Procesar ramas feature y hotfix
+          echo "Sincronizando otras ramas..."
+          git branch -r | grep 'origin/\(feature\|hotfix\)/' | sed 's#origin/##' | while read branch; do
+            process_branch $branch $branch
+          done
           
-          # Actualizar el índice de git sin crear un commit
-          git update-index --skip-worktree .github/workflows/
+          # Sincronizar tags (excluyendo workflows)
+          echo "Sincronizando tags..."
+          git tag -l | while read tag; do
+            git checkout $tag
+            git checkout -b "temp_tag_$tag"
+            git filter-branch -f \
+              --tree-filter 'rm -rf .github/workflows' \
+              --env-filter '
+                export GIT_COMMITTER_NAME="Acloud DevOps"
+                export GIT_COMMITTER_EMAIL="Acloud.DevOps@analitika.cloud"
+                export GIT_AUTHOR_NAME="Acloud DevOps"
+                export GIT_AUTHOR_EMAIL="Acloud.DevOps@analitika.cloud"
+              ' HEAD
+            git tag -f $tag
+            git push bitbucket $tag -f
+            git checkout main
+            git branch -D "temp_tag_$tag"
+          done
           
-          # Push directo a Bitbucket sin commit adicional
-          echo "⬆️ Realizando push a Bitbucket..."
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/analitikacloud/destino-repo.git
-          git push bitbucket HEAD:$CURRENT_BRANCH --force
-          
-          # Limpiar
-          echo "🧹 Limpiando..."
-          git checkout $CURRENT_BRANCH
-          git branch -D temp-sync-$CURRENT_BRANCH
-          
-          echo "✅ Sincronización completada exitosamente"
+          if [ $? -eq 0 ]; then
+            echo "✅ Sincronización completada exitosamente"
+          else
+            echo "❌ Error en la sincronización"
+            exit 1
+          fi
