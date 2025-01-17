@@ -20,9 +20,19 @@ jobs:
 
       - name: Setup repository and identity
         run: |
+          # Crear archivo de exclusión
+          echo "Creating exclusion file..."
+          cat > .git/info/exclude << EOF
+          .github/workflows/
+          .github/workflows/*
+          EOF
+
           # Crear script temporal para modificar el último commit
           cat > modify_commit.sh << 'EOF'
           #!/bin/bash
+          
+          # Remover workflows del índice de git
+          git rm -r --cached .github/workflows/ || true
           
           # Obtener el último commit
           COMMIT_HASH=$(git rev-parse HEAD)
@@ -30,9 +40,9 @@ jobs:
           # Preparar el nuevo commit con la identidad modificada
           git checkout -b temp_branch
           GIT_COMMITTER_NAME="Acloud DevOps" \
-          GIT_COMMITTER_EMAIL="Acloud.DevOps@analitika.cloud" \
+          GIT_COMMITTER_EMAIL="devops@analitika.cloud" \
           GIT_AUTHOR_NAME="Acloud DevOps" \
-          GIT_AUTHOR_EMAIL="Acloud.DevOps@analitika.cloud" \
+          GIT_AUTHOR_EMAIL="devops@analitika.cloud" \
           git commit-tree "$COMMIT_HASH"^{tree} -p "$COMMIT_HASH"^ -m "$(git log -1 --pretty=%B)" > .git/NEW_COMMIT
           
           # Actualizar la referencia de la rama
@@ -53,20 +63,31 @@ jobs:
           echo "Configurando remote de Bitbucket..."
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git
           
-          echo "Sincronizando con identidad modificada..."
-          git push bitbucket temp_branch:desa --force
+          echo "Configurando filtros de git..."
+          # Configurar filtro para excluir workflows
+          git config --local filter.workflow.clean "sed -e '/.github\/workflows/d'"
+          
+          echo "Sincronizando con identidad modificada (excluyendo workflows)..."
+          # Push excluyendo workflows
+          git push bitbucket temp_branch:desa --force --sparse
           
           # Sincronizar otras ramas
-          git push bitbucket main:main --force || true
-          git push bitbucket cert:cert --force || true
-          git push bitbucket 'refs/heads/feature/*:refs/heads/feature/*' --force || true
-          git push bitbucket 'refs/heads/hotfix/*:refs/heads/hotfix/*' --force || true
+          for branch in main cert; do
+            git checkout $branch || continue
+            git rm -r --cached .github/workflows/ || true
+            git commit -m "Remove workflows" --allow-empty || true
+            git push bitbucket $branch:$branch --force --sparse
+          done
+          
+          # Sincronizar ramas feature y hotfix
+          git push bitbucket 'refs/heads/feature/*:refs/heads/feature/*' --force --sparse || true
+          git push bitbucket 'refs/heads/hotfix/*:refs/heads/hotfix/*' --force --sparse || true
           
           echo "Sincronizando tags..."
           git push bitbucket --tags --force
           
           if [ $? -eq 0 ]; then
-            echo "✅ Sincronización completada exitosamente"
+            echo "✅ Sincronización completada exitosamente sin workflows"
           else
             echo "❌ Error en la sincronización"
             exit 1
