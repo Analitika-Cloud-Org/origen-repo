@@ -55,9 +55,9 @@ jobs:
             
             # Push con la identidad correcta
             GIT_COMMITTER_NAME="Acloud DevOps" \
-            GIT_COMMITTER_EMAIL="devops@analitika.cloud" \
+            GIT_COMMITTER_EMAIL="Acloud.DevOps@analitika.cloud" \
             GIT_AUTHOR_NAME="Acloud DevOps" \
-            GIT_AUTHOR_EMAIL="devops@analitika.cloud" \
+            GIT_AUTHOR_EMAIL="Acloud.DevOps@analitika.cloud" \
             git push bitbucket HEAD:$target --force
           }
           
