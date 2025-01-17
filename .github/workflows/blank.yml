@@ -22,7 +22,7 @@ jobs:
         run: |
           # Configurar identidad global
           git config --global user.name "Acloud DevOps"
-          git config --global user.email "devops@analitika.cloud"
+          git config --global user.email "Acloud.DevOps@analitika.cloud"
           
           # Crear archivo de exclusión
           mkdir -p .git/info
@@ -51,9 +51,9 @@ jobs:
             
             # Push con la identidad correcta
             GIT_COMMITTER_NAME="Acloud DevOps" \
-            GIT_COMMITTER_EMAIL="devops@analitika.cloud" \
+            GIT_COMMITTER_EMAIL="Acloud.DevOps@analitika.cloud" \
             GIT_AUTHOR_NAME="Acloud DevOps" \
-            GIT_AUTHOR_EMAIL="devops@analitika.cloud" \
+            GIT_AUTHOR_EMAIL="Acloud.DevOps@analitika.cloud" \
             git push -f bitbucket "temp_${branch}:${target}"
             
             # Limpiar rama temporal
