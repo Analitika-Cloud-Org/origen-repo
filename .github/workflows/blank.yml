@@ -18,20 +18,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup repository and identity
+      - name: Setup repository
         run: |
-          # Crear una rama temporal limpia
-          echo "Creando rama temporal..."
-          git checkout -b temp_mirror
-          
-          # Remover workflows
-          echo "Removiendo workflows..."
-          git rm -r --cached .github/workflows/ || true
-          git commit -m "Remove workflows" --allow-empty || true
-          
-          # Configurar identidad para los commits
+          # Configurar identidad global
           git config --global user.name "Acloud DevOps"
           git config --global user.email "devops@analitika.cloud"
+          
+          # Crear archivo de exclusión
+          mkdir -p .git/info
+          echo ".github/workflows/" > .git/info/exclude
 
       - name: Push to Bitbucket
         env:
@@ -42,46 +37,51 @@ jobs:
           echo "Configurando remote de Bitbucket..."
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/$BITBUCKET_REPO.git
           
-          # Función para procesar y pushear una rama
+          # Función para pushear una rama excluyendo workflows
           push_branch() {
             local branch=$1
             local target=$2
             echo "Procesando rama $branch -> $target"
             
-            git checkout $branch || return 1
-            # Remover workflows en esta rama
-            git rm -r --cached .github/workflows/ || true
-            git commit -m "Remove workflows" --allow-empty || true
+            # Checkout de la rama
+            git checkout -b "temp_${branch}" $branch
+            
+            # Excluir workflows sin crear un nuevo commit
+            git rm -r --cached .github/workflows/ >/dev/null 2>&1 || true
             
             # Push con la identidad correcta
             GIT_COMMITTER_NAME="Acloud DevOps" \
-            GIT_COMMITTER_EMAIL="Acloud.DevOps@analitika.cloud" \
+            GIT_COMMITTER_EMAIL="devops@analitika.cloud" \
             GIT_AUTHOR_NAME="Acloud DevOps" \
-            GIT_AUTHOR_EMAIL="Acloud.DevOps@analitika.cloud" \
-            git push bitbucket HEAD:$target --force
+            GIT_AUTHOR_EMAIL="devops@analitika.cloud" \
+            git push -f bitbucket "temp_${branch}:${target}"
+            
+            # Limpiar rama temporal
+            git checkout $branch
+            git branch -D "temp_${branch}"
           }
           
           # Procesar cada rama
           echo "Sincronizando ramas principales..."
-          push_branch "main" "main" || true
-          push_branch "desa" "desa" || true
-          push_branch "cert" "cert" || true
+          for branch in main desa cert; do
+            git show-ref --verify --quiet refs/heads/$branch && push_branch $branch $branch
+          done
           
           # Procesar ramas feature y hotfix
           echo "Sincronizando ramas feature y hotfix..."
-          for branch in $(git branch -r | grep 'origin/feature/' | sed 's#origin/##'); do
-            push_branch "$branch" "$branch" || true
+          git branch -r | grep 'origin/feature/' | sed 's#origin/##' | while read branch; do
+            push_branch $branch $branch
           done
           
-          for branch in $(git branch -r | grep 'origin/hotfix/' | sed 's#origin/##'); do
-            push_branch "$branch" "$branch" || true
+          git branch -r | grep 'origin/hotfix/' | sed 's#origin/##' | while read branch; do
+            push_branch $branch $branch
           done
           
           echo "Sincronizando tags..."
           git push bitbucket --tags --force
           
           if [ $? -eq 0 ]; then
-            echo "✅ Sincronización completada exitosamente sin workflows"
+            echo "✅ Sincronización completada exitosamente"
           else
             echo "❌ Error en la sincronización"
             exit 1
