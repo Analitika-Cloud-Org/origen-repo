@@ -1,3 +1,4 @@
+
 name: Mirror to Bitbucket
 on:
   push:
@@ -60,9 +61,15 @@ jobs:
             git branch -D "temp_$branch"
           }
           
-          # Procesar ramas principales
-          echo "Sincronizando ramas principales..."
-          for branch in main desa cert; do
+          # Mapear la rama main a dev
+          if git show-ref --verify --quiet refs/heads/main; then
+            echo "Sincronizando main a dev..."
+            process_branch main desa
+          fi
+          
+          # Procesar otras ramas principales (excepto main que ya se procesó arriba)
+          echo "Sincronizando otras ramas principales..."
+          for branch in desa cert; do
             if git show-ref --verify --quiet refs/heads/$branch; then
               process_branch $branch $branch
             fi
